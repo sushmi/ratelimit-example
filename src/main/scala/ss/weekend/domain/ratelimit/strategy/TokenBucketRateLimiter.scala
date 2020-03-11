@@ -3,8 +3,8 @@ package ss.weekend.domain.ratelimit.strategy
 import java.util.UUID
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
-import ss.weekend.domain.ratelimit.{RateLimitExceededException, RateLimiter}
-import ss.weekend.domain.userQuota.{QuotaAllocation, UserQuotaService}
+import ss.weekend.domain.ratelimit.{RateLimitInvalidUserException, RateLimitExceededException, RateLimiter}
+import ss.weekend.domain.userQuota.QuotaAllocation
 import ss.weekend.ratelimitex.UserRequestContext
 
 import scala.concurrent.duration.FiniteDuration
@@ -26,6 +26,10 @@ class TokenBucketRateLimiter extends RateLimiter {
   }
 
   override def tryAcquire[T](permits: Int, request: UserRequestContext)(future: Future[T]): Future[T] = {
+    //validate permits
+    if(permits < 1) {
+      return Future.failed(new IllegalArgumentException)
+    }
     val (permitsAvailable, lastUpdated) = getCurrentLimit(request)
     if (permits > permitsAvailable) {
       Future.failed(RateLimitExceededException(getRemainingWaitInSeconds(request.userId, lastUpdated)))
@@ -41,14 +45,12 @@ class TokenBucketRateLimiter extends RateLimiter {
   private def getCurrentLimit(request: UserRequestContext): (PermitsAvailable, LastUpdated) = {
     val now = System.nanoTime()
     val userId = request.userId.toString
-    //TODO: maybe not 0 as default, 0 doesn't mean user is blocked or has no limit defined yet
-    val (limitPerUnit, timeUnit) = QuotaAllocation.cache.getIfPresent(userId).getOrElse(0L, TimeUnit.SECONDS)
-    val (permitsAvailable, lastUpdated) = bucket.getOrDefault(userId, (limitPerUnit, now))
+    val (limitPerUnit, timeUnit) = QuotaAllocation.cache.getIfPresent(userId).getOrElse(Long.MinValue, TimeUnit.SECONDS)
+    if(limitPerUnit == Long.MinValue) throw RateLimitInvalidUserException()
 
+    val (permitsAvailable, lastUpdated) = bucket.getOrDefault(userId, (limitPerUnit, now))
     val rateInSeconds = limitPerUnit.toDouble / timeUnit.toSeconds(1)
     val additionalPermits = (now - lastUpdated ) * rateInSeconds / 1e9
     (Math.min(additionalPermits.toInt + permitsAvailable, limitPerUnit), if(additionalPermits.toInt > 0) now else lastUpdated)
   }
 }
-
-

@@ -10,7 +10,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11",
   "com.github.blemale" %% "scaffeine" % "3.1.0",
 
-  "org.specs2" %% "specs2-core" % "4.8.3" % Test,
   "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.26" % Test,
-  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11" % Test
+  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11" % Test,
+  "org.scalatest" %% "scalatest" % "3.1.1" % Test
 )

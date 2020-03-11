@@ -5,10 +5,12 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.server.{HttpApp, Route}
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.server.{ExceptionHandler, HttpApp, Route}
 import akka.stream.ActorMaterializer
 import spray.json.DefaultJsonProtocol._
 import spray.json.{JsString, JsValue, RootJsonFormat}
+import ss.weekend.domain.ratelimit.RateLimitException
 import ss.weekend.domain.ratelimit.strategy.TokenBucketRateLimiter
 import ss.weekend.domain.userQuota.{DefaultQuotaService, DefaultUserQuotaRepository, UserQuotaRepository}
 
@@ -45,6 +47,12 @@ object RateLimitExApp extends HttpApp with App with RateLimiterDirectives {
 
   // formats for unmarshalling and marshalling
   implicit val userRequest = jsonFormat1(UserRequestContext)
+
+  implicit def exceptionHandler: ExceptionHandler =
+    ExceptionHandler {
+      case ex =>
+          complete(HttpResponse(StatusCodes.BadRequest, entity = ex.getMessage))
+    }
 
   def serveRequest(requestContext: UserRequestContext) =
     Future(s"Hi ${requestContext.userId} !!")
