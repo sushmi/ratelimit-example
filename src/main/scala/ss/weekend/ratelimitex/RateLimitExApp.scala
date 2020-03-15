@@ -10,7 +10,6 @@ import akka.http.scaladsl.server.{ExceptionHandler, HttpApp, Route}
 import akka.stream.ActorMaterializer
 import spray.json.DefaultJsonProtocol._
 import spray.json.{JsString, JsValue, RootJsonFormat}
-import ss.weekend.domain.ratelimit.RateLimitException
 import ss.weekend.domain.ratelimit.strategy.TokenBucketRateLimiter
 import ss.weekend.domain.userQuota.{DefaultQuotaService, DefaultUserQuotaRepository, UserQuotaRepository}
 
